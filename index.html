@@ -7,37 +7,44 @@
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<header><div class="wrap"><strong>SOHO GAME</strong><span>월간 경영 시뮬레이션</span></div></header>
+<header><div class="wrap"><strong>SOHO GAME</strong><span>일간 경영 시뮬레이션</span></div></header>
 <main class="wrap">
-<section id="intro"><h1>나의 첫 사업</h1><p>출발할 업종을 선택하세요. 매달 결정하고, 결과를 보며 사업을 키워 나갑니다.</p>
-<form id="start"><label>사업 이름<input name="name" maxlength="30" placeholder="예: 작은상점"></label><div id="industries"></div></form></section>
+<section id="intro"><h1>나의 첫 사업</h1>
+<form id="start">
+<div class="fields"><label>사업 이름<input id="name" maxlength="30" placeholder="작은상점"></label>
+<label>시작 업종<select id="industry"></select></label></div>
+<fieldset id="opening-items"><legend>첫 품목</legend><div class="checks"></div></fieldset>
+<button>사업 시작</button></form></section>
+
 <section id="game" hidden>
-<h1 id="business"></h1>
-<div id="metrics" class="metrics"></div>
+<h1 id="business"></h1><div id="metrics" class="metrics"></div>
 <div class="layout">
 <div>
-<section class="panel"><p class="eyebrow">이번 달 상황</p><h2 id="event"></h2><p id="story"></p></section>
-<section class="panel"><h2>월간 경영 결정</h2>
-<form id="decisions">
-<div class="fields">
-<label>업종<select name="industry"></select></label>
-<label>판매·접수 방식<select name="channel"></select></label>
-<label>사업장<select name="place"></select></label>
-<label>건당 가격 (원)<input name="price" type="number" required min="1000" max="1000000" step="1"></label>
-<label><span id="quantity-label"></span><input name="quantity" type="number" required min="0" max="500" step="1"></label>
-</div>
-<p id="estimate" class="muted"></p>
-<button type="submit">이번 달 마감</button>
-</form>
-</section>
-</div>
-<section id="report" class="panel" aria-live="polite"></section>
+<section class="panel"><p class="eyebrow">오늘의 상황</p><h2 id="event"></h2><p id="story"></p>
+<div id="responses" class="checks">
+<label><input type="checkbox" value="offer"> 추가 주문 안내</label>
+<label><input type="checkbox" value="promotion"> 추가 홍보</label>
+<label><input type="checkbox" value="staff"> 작업 지원 투입</label>
+</div><p class="muted">선택하지 않으면 기존 운영을 유지합니다.</p></section>
+<form id="plan" class="panel">
+<h2>경영 계획</h2>
+<div class="fields"><label>업종<select id="active-industry"></select></label><label>사업장<select id="place"></select></label></div>
+<fieldset><legend>판매·접수 방식</legend><div id="channels" class="checks"></div></fieldset>
+<fieldset><legend>판매 가격 유형</legend><div id="tiers" class="checks">
+<label><input type="checkbox" value="regular"> 정상가격</label><label><input type="checkbox" value="sale"> 세일가격</label></div></fieldset>
+<fieldset><legend>품목과 가격</legend><div id="products"></div></fieldset>
+<fieldset><legend>비용 비율</legend><div id="rates" class="fields"></div>
+<p class="muted">인건비·마케팅·추가 처리비는 매출 기준, 월세는 사업장 기준액 대비 비율, 세금은 양수인 월간 세전이익 기준입니다. 기존 약정과 채널 수수료는 자동 적용됩니다.</p></fieldset>
+<details><summary>대출 신청</summary><div id="funding" class="fields"></div><p class="muted">다음 달부터 월말 상환. 은행 6개월·월 1%, 정부 12개월·월 0.45%의 게임용 조건입니다.</p></details>
+<button id="advance">오늘 마감</button>
+</form></div>
+<aside class="panel"><h2>오늘의 결과</h2><div id="today" aria-live="polite"></div>
+<h2 id="report-title">월말 실적</h2><div id="report" aria-live="polite"></div></aside>
 </div>
 <div class="save"><button id="export" type="button" class="secondary">저장 파일 내보내기</button><span id="status" role="status"></span></div>
 </section>
 <div class="save"><label class="secondary file">저장 파일 불러오기<input id="import" type="file" accept="application/json,.json"></label></div>
 <p id="error" role="alert"></p>
 </main>
-<script type="module" src="./app.mjs"></script>
-</body>
-</html>
+<script type="module" src="./daily-app.mjs"></script>
+</body></html>

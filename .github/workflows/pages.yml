@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: node --test
-      - run: node --check app.mjs
+      - run: node --check daily-app.mjs
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: verify
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - run: |
           mkdir public
-          cp index.html style.css app.mjs data.mjs engine.mjs public/
+          cp index.html style.css daily-app.mjs daily.mjs data.mjs public/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
