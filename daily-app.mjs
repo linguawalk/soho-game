@@ -1,5 +1,5 @@
 import { industries, places } from './data.mjs'
-import { products, channels, eventFor, create, migrate, advance, validatePlan, lifestyle, isLifestyleProduct } from './daily.mjs'
+import { products, channels, eventFor, create, migrate, advance, validatePlan, lifestyle, isLifestyleProduct } from './daily.mjs?v=20261123-sourcing'
 
 const $ = id => document.getElementById(id)
 const key = 'soho-game.save'
