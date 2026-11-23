@@ -1,59 +1,153 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SOHO Game · 나의 첫 사업</title>
-<link rel="stylesheet" href="./style.css?v=20261123-pricing">
-</head>
-<body>
-<header><div class="wrap"><strong>SOHO GAME</strong><span>일간 경영 시뮬레이션</span></div></header>
-<main class="wrap">
-<section id="intro"><h1>나의 첫 사업</h1>
-<form id="start">
-<div class="fields"><label>사업 이름<input id="name" maxlength="30" placeholder="작은상점"></label>
-<label>시작 업종<select id="industry"></select></label></div>
-<fieldset id="opening-items"><legend>첫 품목</legend><div class="checks"></div></fieldset>
-<button>사업 시작</button></form></section>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SOHO Game | 별빛상권</title>
+<style>
+:root{font:16px/1.55 system-ui,sans-serif;color:#172923;background:#f3f2e9}*{box-sizing:border-box}body{margin:0}header{background:#173d35;color:#fff;padding:18px 24px;font-weight:750}main{max-width:1120px;margin:auto;padding:24px}h1{font-size:clamp(2rem,5vw,3.6rem);margin:.15em 0}.panel{background:#fffdfa;border:1px solid #dcdccf;border-radius:12px;padding:18px;margin:14px 0}.layout,.fields{display:grid;gap:14px}.layout{grid-template-columns:1.15fr 1fr}.fields{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}label{display:block;font-weight:650}input,select,button{font:inherit;padding:8px;border:1px solid #a6b4aa;border-radius:6px}input,select{width:100%;margin-top:4px;background:white;color:inherit}button{background:#205342;color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.6;cursor:default}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 4px;border-bottom:1px solid #e4e3d9}caption{text-align:left;font-weight:700;margin:8px 0}small,.muted{color:#465c53}.product{padding:12px 0;border-bottom:1px solid #ddd}.badge{background:#edf1de;border-radius:6px;padding:8px 12px}#error{color:#962a16}details{margin:12px 0}summary{cursor:pointer}[hidden]{display:none!important}@media(max-width:760px){.layout{grid-template-columns:1fr}main{padding:14px}}
+</style></head><body><header>SOHO GAME · 별빛상권</header><main>
+<section id="intro"><h1>별빛상권의 세 가게</h1><p>같은 세 상품을 파는 가게 세 곳. 좋은 자리를 얻고, 가격과 재고를 조절해 이달 매출 1위에 도전하세요.</p>
+<form id="start" class="panel"><div class="fields"><label>첫 매장 위치<select id="site"></select></label><label>첫 휴무일<select id="rest-day"></select></label></div><p>초기 자금 450만 원 · 30일 중 25일 영업</p><button>개업하기</button></form></section>
+<section id="game" hidden><h1 id="calendar"></h1><p id="headline" class="badge"></p>
+<div class="layout"><form id="plan" class="panel">
+<h2>오늘의 운영</h2><p id="event"></p><div id="items"></div>
+<div class="fields"><label>오늘 투입할 직원<input id="staff" type="number" value="0" min="0" max="9" required></label><label>오늘 홍보비 (원)<input id="marketing" type="number" value="0" min="0" max="150000" required></label></div>
+<p id="capacity" class="muted"></p>
+<label>라이벌 매장과 위치 교환<select id="move"></select></label>
+<p id="estimate"></p><button id="next">오늘 마감</button><p id="error" role="alert"></p>
+</form><aside>
+<section class="panel"><h2>매장별 공개 매출</h2><div id="public"></div><details><summary>이번 달 일별 매출 기록</summary><div id="history"></div></details></section>
+<section class="panel"><h2>내 매장 판매 내역</h2><div id="private"></div></section>
+<section class="panel"><h2>지난달 결과</h2><div id="monthly"></div></section>
+</aside></div>
+<p id="status" role="status"></p></section></main>
+<script>
 
-<section id="game" hidden>
-<h1 id="business"></h1><div id="metrics" class="metrics"></div>
-<div class="layout">
-<div>
-<section class="panel"><p class="eyebrow">오늘의 상황</p><h2 id="event"></h2><p id="story"></p>
-<div id="responses" class="checks">
-<label><input type="checkbox" value="offer"> 추가 주문 안내</label>
-<label><input type="checkbox" value="promotion"> 추가 홍보</label>
-<label><input type="checkbox" value="staff"> 작업 지원 투입</label>
-</div><p class="muted">선택하지 않으면 기존 운영을 유지합니다.</p></section>
-<form id="plan" class="panel">
-<h2>경영 계획</h2>
-<div class="fields"><label>업종<select id="active-industry"></select></label><label>사업장<select id="place"></select></label></div>
-<fieldset><legend>판매·접수 방식</legend><div id="channels" class="checks"></div></fieldset>
-<fieldset><legend>판매 가격 유형</legend><div id="tiers" class="checks">
-<label><input type="checkbox" value="regular"> 정상가격</label><label><input type="checkbox" value="sale"> 세일가격</label></div></fieldset>
-<fieldset><legend>품목과 가격</legend><div id="products"></div>
-<p class="muted">판매업에서는 같은 날 매입한 동일 품목의 수량을 합산합니다. 100개 이상 3%, 500개 이상 5%, 1,000개 이상 10% 매입 할인이 적용됩니다.</p></fieldset>
-<fieldset id="sourcing" hidden><legend>생활소품 조달</legend>
-<p>매입단가는 위 품목 설정에서 변경할 수 있습니다. 직접 제작 단가 7,000원 · 최소 제작수량 1,000개</p>
-<label><input type="checkbox" id="wholesale"> 제작 재고가 부족하면 사입</label>
-<div class="fields"><label>오늘 직접 제작 수량<input id="production" type="number" min="0" max="100000" step="1" value="0"></label>
-<label>제작 물류비 (회당 원)<input id="logistics" type="number" min="0" step="1" value="300000"></label></div>
-<p id="production-preview" class="muted"></p></fieldset>
-<fieldset><legend>채널별 고정 인력</legend><div id="team" class="fields"></div>
-<p class="muted">일 판매 500개 이상(온라인), 200개 이상(오프라인)부터 채널별 직원을 배치해야 합니다. 이번 달 최대 배치 인원 기준으로 1인당 월 250만 원을 정산합니다.</p></fieldset>
-<fieldset><legend>비용·세금 비율</legend><div id="rates" class="fields"></div>
-<p class="muted">작업 지원·마케팅·추가 처리비는 매출 기준, 월세는 사업장 기준액 대비 비율입니다. 표시 가격은 부가세 별도입니다. 게임 내 부가세는 월말에, 소득세·법인세는 12개월마다 연간 이익을 기준으로 계산합니다.</p></fieldset>
-<details><summary>대출 신청</summary><div id="funding" class="fields"></div><p class="muted">다음 달부터 월말 상환. 은행 6개월·월 1%, 정부 12개월·월 0.45%의 게임용 조건입니다.</p></details>
-<button id="advance">오늘 마감</button>
-</form></div>
-<aside class="panel"><h2>오늘의 결과</h2><div id="today" aria-live="polite"></div>
-<h2 id="report-title">월말 실적</h2><div id="report" aria-live="polite"></div></aside>
-</div>
-<div class="save"><button id="export" type="button" class="secondary">저장 파일 내보내기</button><span id="status" role="status"></span></div>
-</section>
-<div class="save"><label class="secondary file">저장 파일 불러오기<input id="import" type="file" accept="application/json,.json"></label></div>
-<p id="error" role="alert"></p>
-</main>
-<script type="module" src="./daily-app.mjs?v=20261123-pricing"></script>
-</body></html>
+const goods = [
+  {name:'바람 텀블러', cost:4500, reference:8900, demand:135},
+  {name:'별빛 노트', cost:2200, reference:4900, demand:170},
+  {name:'구름 파우치', cost:3300, reference:6900, demand:145},
+];
+const sites = [
+  {name:'역 앞 모퉁이', rent:1800000, traffic:1.6, premium:2400000},
+  {name:'중앙시장 입구', rent:1150000, traffic:1.25, premium:1500000},
+  {name:'주택가 골목', rent:550000, traffic:0.85, premium:750000},
+];
+const salary=180000, marketingLimit=150000;
+const events=['평일 장보기','학교 앞 하굣길','갑작스러운 비','시장 나들이','퇴근길 손님','동네 축제','한산한 거리'];
+function discount(q){return q>=400?10:q>=300?7:q>=200?5:q>=100?3:0}
+function quote(id,q){return Math.round(goods[id].cost*q*(100-discount(q))/100)}
+function rest(day){return [0,2,4].map(offset=>Array.from({length:5},(_,i)=>((day-1+offset+i*6)%30)+1).sort((a,b)=>a-b))
+}
+function start(site,restDay){return {month:1,day:1,cash:4500000,stock:[0,0,0],locations:[site,...[0,1,2].filter(x=>x!==site)],rest:rest(restDay),history:[],last:null,closed:null,rent:0}}
+function swapCost(a,b){return Math.round((sites[a].premium+sites[b].premium)/2)}
+function resolve(s,p){
+  const {price,order,employees,marketing,move}=p;
+  if(!price.every(x=>Number.isInteger(x)&&x>=100&&x<=100000)||!order.every(x=>Number.isInteger(x)&&x>=0&&x<=5000)||!Number.isInteger(employees)||employees<0||employees>9||!Number.isInteger(marketing)||marketing<0||marketing>marketingLimit||![-1,1,2].includes(move))throw Error('가격, 발주량, 직원 수 또는 홍보비의 입력 범위를 확인하세요.');
+  const locations=[...s.locations], off=s.rest.map(days=>days.includes(s.day));
+  const fee=move!==-1?swapCost(locations[0],locations[move]):0;
+  if(move!==-1)[locations[0],locations[move]]=[locations[move],locations[0]];
+  const spend=order.reduce((n,q,i)=>n+quote(i,q),0)+(off[0]?0:marketing+employees*salary)+fee;
+  if(spend>Math.max(0,s.cash))throw Error('오늘 지출에 필요한 현금이 부족합니다.');
+  const stock=s.stock.map((n,i)=>n+order[i]), units=[0,0,0], sales=[0,0,0], capacity=[(employees+1)*100,200,200];
+  const factor=[1,1.08,.79,1.15,.99,1.48,.85][(s.day+s.month-2)%7];
+  for(let id=0;id<goods.length;id++){
+    const g=goods[id];
+    const prices=[price[id],Math.round(g.reference*(.94+(s.day%4)*.03)),Math.round(g.reference*(1.03+(s.day%3)*.02))];
+    const scores=prices.map((x,j)=>off[j]||capacity[j]===0||(j===0&&stock[id]===0)?0:
+      sites[locations[j]].traffic*(j===0?1+marketing/marketingLimit*.65:1)*Math.min(3,(g.reference/x)**1.55));
+    const total=scores.reduce((a,b)=>a+b,0)+.85;
+    for(let j=0;j<3;j++){
+      const count=Math.min(capacity[j],j===0?stock[id]:Infinity,Math.floor(g.demand*factor*scores[j]/total));
+      if(j===0){units[id]=count;stock[id]-=count}
+      capacity[j]-=count;sales[j]+=count*prices[j];
+    }
+  }
+  const rent=s.rent+sites[locations[0]].rent;
+  const last={day:s.day,sales,units,off,prices:price,spend};
+  const history=[...s.history,last];
+  const end=s.day===30;
+  const monthlyRent=end?Math.round(rent/30):0;
+  return {...s,stock,locations,cash:s.cash+sales[0]-spend-monthlyRent,rent:end?0:rent,last,history:end?[]:history,
+    closed:end?{month:s.month,rent:monthlyRent,sales:[0,1,2].map(i=>history.reduce((n,row)=>n+row.sales[i],0)),history}:s.closed,
+    rest:end?rest((s.rest[0][0]+1)%6+1):s.rest,month:s.month+Number(end),day:end?1:s.day+1};
+}
+const $=id=>document.getElementById(id);
+const shops=['내 매장','달빛상점','종달새상회'];
+const won=n=>n.toLocaleString('ko-KR')+'원';
+const key='soho-game.starlight.v1';
+let state;
+const priceInputs=[],orderInputs=[],inventoryLabels=[],quoteLabels=[];
+function el(tag,value){const n=document.createElement(tag);n.textContent=value;return n}
+function table(parent,heads,rows){
+  const t=el('table',''),h=el('thead',''),r=el('tr',''),b=el('tbody','');
+  r.append(...heads.map(x=>el('th',x)));h.append(r);
+  for(const values of rows){const row=el('tr','');row.append(...values.map(x=>el('td',x)));b.append(row)}
+  t.append(h,b);parent.append(t)
+}
+function options(select,rows){select.replaceChildren(...rows.map(([value,name])=>new Option(name,value)))}
+options($('site'),sites.map((site,i)=>[i,site.name+' · 월 '+won(site.rent)]));
+options($('rest-day'),Array.from({length:6},(_,i)=>[i+1,(i+1)+'일 · 이후 6일 간격']));
+function field(label,value,min,max){
+  const l=el('label',label),n=el('input','');
+  Object.assign(n,{type:'number',min,max,value,required:true});l.append(n);return [l,n]
+}
+goods.forEach((g,i)=>{
+  const block=el('section',''),f=el('div',''),qty=el('p',''),q=el('small','');
+  block.className='product';f.className='fields';
+  const [pl,p]=field('판매가 (원)',g.reference,100,100000),[ol,o]=field('오늘 발주량',0,0,5000);
+  f.append(pl,ol);block.append(el('strong',g.name),qty,f,q);$('items').append(block);
+  priceInputs.push(p);orderInputs.push(o);inventoryLabels.push(qty);quoteLabels.push(q);
+});
+function plan(){return {price:priceInputs.map(x=>x.valueAsNumber),order:orderInputs.map(x=>x.valueAsNumber),employees:$('staff').valueAsNumber,marketing:$('marketing').valueAsNumber,move:Number($('move').value)}}
+function preview(){
+  const p=plan(),off=state.rest[0].includes(state.day);
+  let sum=0;
+  goods.forEach((g,i)=>{
+    const n=p.order[i]; const cost=Number.isInteger(n)&&n>=0?quote(i,n):0;
+    sum+=cost;quoteLabels[i].textContent='매입 할인 '+discount(n)+'% · 발주액 '+won(cost)
+  });
+  const premium=p.move<0?0:swapCost(state.locations[0],state.locations[p.move]);
+  const staffing=off?0:(p.employees||0)*salary;
+  $('capacity').textContent=off?'휴무일에도 발주와 위치 교환이 가능합니다.':'오늘 최대 '+((p.employees||0)+1)*100+'개 판매 · 직원 1인당 일 '+won(salary);
+  $('estimate').textContent='오늘 예상 지출 '+won(sum+staffing+(off?0:p.marketing||0)+premium);
+}
+function resultRow(row,j){return row.off[j]?'휴무':won(row.sales[j])}
+function render(){
+  $('intro').hidden=true;$('game').hidden=false;
+  const off=state.rest[0].includes(state.day);
+  $('calendar').textContent=state.month+'개월 차 '+state.day+'일';
+  const site=sites[state.locations[0]];
+  $('headline').textContent=site.name+' · 현금 '+won(state.cash)+' · 월 임대료 '+won(site.rent);
+  $('event').textContent=(off?'의무 휴무일':events[(state.day+state.month-2)%7])+' · 내 휴무일 '+state.rest[0].join(', ')+'일';
+  $('staff').disabled=off;$('marketing').disabled=off;
+  $('next').textContent=state.day===30?'오늘 마감 및 월간 결산':off?'휴무일 마감':'오늘 마감';
+  goods.forEach((g,i)=>{inventoryLabels[i].textContent='기준 매입가 '+won(g.cost)+' · 재고 '+state.stock[i]+'개';priceInputs[i].value=state.last?.prices[i]??g.reference;orderInputs[i].value=0});
+  $('staff').value=0;$('marketing').value=0;
+  options($('move'),[[-1,'현재 매장 유지'],...[1,2].map(j=>[j,shops[j]+' · '+sites[state.locations[j]].name+' · 권리금 '+won(swapCost(state.locations[0],state.locations[j]))])]);
+  preview();
+  $('public').replaceChildren();
+  table($('public'),['매장','현재 위치','최근 일매출'],shops.map((name,j)=>[name,sites[state.locations[j]].name,state.last?resultRow(state.last,j):'집계 전']));
+  $('history').replaceChildren();const h=state.history.length?state.history:state.closed?.history||[];
+  if(h.length)table($('history'),['영업일',...shops],h.map(r=>[r.day+'일',...shops.map((_,j)=>resultRow(r,j))]));
+  $('private').replaceChildren();
+  if(state.last)table($('private'),['품목','판매가','수량','매출'],goods.map((g,i)=>[g.name,won(state.last.prices[i]),state.last.units[i]+'개',won(state.last.prices[i]*state.last.units[i])]));
+  else $('private').append(el('p','첫날을 마감하면 판매 내역을 확인할 수 있습니다.'));
+  $('monthly').replaceChildren();
+  if(state.closed){
+    const c=state.closed;
+    const ranks=shops.map((name,j)=>[name,c.sales[j]]).sort((a,b)=>b[1]-a[1]);
+    $('monthly').append(el('p',c.month+'개월 차 · 매출 1위 '+ranks[0][0]),el('p','내 매장 임대료 '+won(c.rent)+' · 발주·직원·홍보·권리금 지출 '+won(c.history.reduce((n,row)=>n+row.spend,0))));
+    table($('monthly'),['매장','월 매출'],ranks.map(([name,value])=>[name,won(value)]))
+  }else $('monthly').append(el('p','30일 차에 순위를 집계합니다.'));
+}
+function save(){
+  try{localStorage.setItem(key,JSON.stringify(state));$('status').textContent='이 브라우저에 진행 상황을 저장했습니다.'}
+  catch{$('status').textContent='브라우저 자동 저장에 실패했습니다.'}
+}
+$('start').addEventListener('submit',event=>{event.preventDefault();state=start(Number($('site').value),Number($('rest-day').value));render();save()});
+$('plan').addEventListener('input',preview);
+$('plan').addEventListener('submit',event=>{
+  event.preventDefault();$('error').textContent='';
+  try{state=resolve(state,plan());render();save()}
+  catch(error){$('error').textContent=error.message}
+});
+try{const saved=JSON.parse(localStorage.getItem(key));if(saved?.locations?.length===3&&saved.rest?.length===3){state=saved;render()}}catch{}
+</script></body></html>
