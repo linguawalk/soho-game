@@ -1,0 +1,31 @@
+:root { font: 16px/1.55 system-ui, sans-serif; color: #142a28; background: #f4f6ef; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+.wrap { max-width: 1120px; margin: auto; padding: 0 24px; }
+header { background: #153b33; color: #fff; padding: 18px 0; }
+header .wrap, .save { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+header span { color: #d6e8db; }
+main { padding-top: 28px !important; padding-bottom: 40px !important; }
+h1 { font-size: clamp(2rem, 5vw, 3.6rem); line-height: 1.15; margin: 10px 0 20px; }
+h2 { font-size: 1.25rem; margin: 0 0 12px; }
+.metrics, #industries { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin: 18px 0; }
+.metric, .panel { background: white; border: 1px solid #d6e0d4; border-radius: 14px; padding: 20px; }
+.metric strong { display: block; font-size: 1.25rem; }
+.panel + .panel { margin-top: 14px; }
+.layout { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; }
+label { display: block; font-weight: 600; }
+input:not([type=file]), select { display: block; margin-top: 5px; padding: 9px; width: 100%; font: inherit; border: 1px solid #aebfb4; border-radius: 6px; background: white; color: inherit; }
+#start > label { max-width: 300px; }
+button, .secondary { display: inline-block; font: inherit; font-weight: 650; padding: 10px 14px; border: 1px solid #205b49; border-radius: 7px; background: #205b49; color: white; cursor: pointer; }
+.secondary { background: white; color: #205b49; }
+.file input { display: block; margin-top: 5px; }
+.eyebrow, .muted, .metric span, #status { color: #435c52; }
+.eyebrow { margin-top: 0; font-weight: 700; }
+.save { margin-top: 16px; }
+#error { color: #9a271c; }
+dl { margin-bottom: 0; }
+dl div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #edf0eb; }
+dd { margin: 0; text-align: right; }
+@media (max-width: 700px) { .layout { grid-template-columns: 1fr; } }

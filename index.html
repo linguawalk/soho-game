@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOHO Game · 나의 첫 사업</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header><div class="wrap"><strong>SOHO GAME</strong><span>월간 경영 시뮬레이션</span></div></header>
+<main class="wrap">
+<section id="intro"><h1>나의 첫 사업</h1><p>출발할 업종을 선택하세요. 매달 결정하고, 결과를 보며 사업을 키워 나갑니다.</p>
+<form id="start"><label>사업 이름<input name="name" maxlength="30" placeholder="예: 작은상점"></label><div id="industries"></div></form></section>
+<section id="game" hidden>
+<h1 id="business"></h1>
+<div id="metrics" class="metrics"></div>
+<div class="layout">
+<div>
+<section class="panel"><p class="eyebrow">이번 달 상황</p><h2 id="event"></h2><p id="story"></p></section>
+<section class="panel"><h2>월간 경영 결정</h2>
+<form id="decisions">
+<div class="fields">
+<label>업종<select name="industry"></select></label>
+<label>판매·접수 방식<select name="channel"></select></label>
+<label>사업장<select name="place"></select></label>
+<label>건당 가격 (원)<input name="price" type="number" required min="1000" max="1000000" step="1"></label>
+<label><span id="quantity-label"></span><input name="quantity" type="number" required min="0" max="500" step="1"></label>
+</div>
+<p id="estimate" class="muted"></p>
+<button type="submit">이번 달 마감</button>
+</form>
+</section>
+</div>
+<section id="report" class="panel" aria-live="polite"></section>
+</div>
+<div class="save"><button id="export" type="button" class="secondary">저장 파일 내보내기</button><span id="status" role="status"></span></div>
+</section>
+<div class="save"><label class="secondary file">저장 파일 불러오기<input id="import" type="file" accept="application/json,.json"></label></div>
+<p id="error" role="alert"></p>
+</main>
+<script type="module" src="./app.mjs"></script>
+</body>
+</html>
