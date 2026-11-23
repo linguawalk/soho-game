@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SOHO Game · 나의 첫 사업</title>
-<link rel="stylesheet" href="./style.css?v=20261123-sourcing">
+<link rel="stylesheet" href="./style.css?v=20261123-pricing">
 </head>
 <body>
 <header><div class="wrap"><strong>SOHO GAME</strong><span>일간 경영 시뮬레이션</span></div></header>
@@ -32,9 +32,10 @@
 <fieldset><legend>판매·접수 방식</legend><div id="channels" class="checks"></div></fieldset>
 <fieldset><legend>판매 가격 유형</legend><div id="tiers" class="checks">
 <label><input type="checkbox" value="regular"> 정상가격</label><label><input type="checkbox" value="sale"> 세일가격</label></div></fieldset>
-<fieldset><legend>품목과 가격</legend><div id="products"></div></fieldset>
+<fieldset><legend>품목과 가격</legend><div id="products"></div>
+<p class="muted">판매업에서는 같은 날 매입한 동일 품목의 수량을 합산합니다. 100개 이상 3%, 500개 이상 5%, 1,000개 이상 10% 매입 할인이 적용됩니다.</p></fieldset>
 <fieldset id="sourcing" hidden><legend>생활소품 조달</legend>
-<p>사입 단가 12,000원 · 직접 제작 단가 7,000원 · 최소 제작수량 1,000개</p>
+<p>매입단가는 위 품목 설정에서 변경할 수 있습니다. 직접 제작 단가 7,000원 · 최소 제작수량 1,000개</p>
 <label><input type="checkbox" id="wholesale"> 제작 재고가 부족하면 사입</label>
 <div class="fields"><label>오늘 직접 제작 수량<input id="production" type="number" min="0" max="100000" step="1" value="0"></label>
 <label>제작 물류비 (회당 원)<input id="logistics" type="number" min="0" step="1" value="300000"></label></div>
@@ -54,5 +55,5 @@
 <div class="save"><label class="secondary file">저장 파일 불러오기<input id="import" type="file" accept="application/json,.json"></label></div>
 <p id="error" role="alert"></p>
 </main>
-<script type="module" src="./daily-app.mjs?v=20261123-sourcing"></script>
+<script type="module" src="./daily-app.mjs?v=20261123-pricing"></script>
 </body></html>

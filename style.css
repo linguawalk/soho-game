@@ -44,3 +44,5 @@ summary { cursor: pointer; font-weight: 650; }
 table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
 th, td { text-align: left; padding: 5px; border-bottom: 1px solid #edf0eb; }
 #wholesale { display: inline; width: auto; margin: 0; }
+caption { text-align: left; font-weight: 700; padding: 4px 0; }
+th, td { overflow-wrap: anywhere; }

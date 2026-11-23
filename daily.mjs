@@ -15,6 +15,31 @@ export const channels = {
 
 export const lifestyle = { purchase: 12000, production: 7000, minimum: 1000, logistics: 300000 }
 export const isLifestyleProduct = (industry, id) => industry === 'retail' && id === 0
+export const purchaseDiscounts = [[1000, 10], [500, 5], [100, 3], [0, 0]]
+
+export function unitCost(industry, item) {
+  const [, price, percent] = products[industry][item.id]
+  return item.unitCost ?? (industry === 'retail' && item.id === 0 ? lifestyle.purchase : Math.round(price * (item.cost ?? percent) / 100))
+}
+
+export function salePriceFor(item) {
+  return item.salePrice ?? Math.max(1, item.price - portion(item.price, item.discount ?? 0))
+}
+
+export function purchaseQuote(price, quantity) {
+  const [, discount] = purchaseDiscounts.find(([minimum]) => quantity >= minimum)
+  return { price, quantity, discount, amount: portion(price * quantity, 100 - discount) }
+}
+
+export function earnings(r) {
+  const revenue = r.regular + r.sale
+  const gross = revenue - r.cost
+  const selling = r.fees + r.rent + r.labor + r.marketing + (r.logistics || 0)
+  const operating = gross - selling
+  const beforeTax = operating - r.interest
+  return { revenue, gross, selling, operating, beforeTax, net: beforeTax - r.tax }
+}
+
 export const staffing = { online: 500, offline: 200, salary: 2500000 }
 
 const events = [
@@ -75,7 +100,10 @@ export function validatePlan(plan) {
   if (!Object.hasOwn(products, plan.industry) || !Object.hasOwn(places, plan.place) || !plan.items.length || !plan.channels.length || !plan.tiers.length) throw Error('품목, 판매 방식과 가격 유형을 각각 하나 이상 선택하세요.')
   for (const item of plan.items) {
     if (!Number.isInteger(item.id) || !catalog[item.id] || !Number.isInteger(item.price) || item.price < 100 || item.price > 10000000) throw Error('품목별 정상가격을 100~10,000,000원으로 입력하세요.')
-    if (!rate(item.cost) || !rate(item.discount) || !rate(item.share) || item.discount >= 100) throw Error('품목 비율은 0~100%, 할인율은 100% 미만으로 입력하세요.')
+    if (!rate(item.share) || !Number.isSafeInteger(unitCost(plan.industry, item)) || unitCost(plan.industry, item) < 0 || unitCost(plan.industry, item) > 10000000 ||
+        (plan.tiers.includes('sale') && (!Number.isSafeInteger(salePriceFor(item)) || salePriceFor(item) < 1 || salePriceFor(item) > item.price))) {
+      throw Error('매입·원가 단가와 세일가격을 확인하세요. 세일가격은 1원 이상, 판매정가 이하여야 합니다.')
+    }
   }
   if (![plan.labor, plan.marketing, plan.rent, plan.tax, plan.handling].every(rate)) throw Error('비용 비율은 0~100% 사이에서 입력하세요.')
   if (new Set(plan.items.map(item => item.id)).size !== plan.items.length ||
@@ -105,6 +133,7 @@ export function advance(state, plan, decisions, funding = []) {
   const monthlyTeam = { online: 0, offline: 0, ...state.monthlyTeam }
   for (const channel of ['online', 'offline']) monthlyTeam[channel] = Math.max(monthlyTeam[channel], team[channel])
   const salesRows = { ...state.salesRows }
+  const purchaseRows = [...(state.purchaseRows || [])]
   const loans = state.loans.map(loan => ({ ...loan }))
   const openingCash = cash
   if (state.day === 1 && plan.place !== state.place) {
@@ -149,6 +178,7 @@ export function advance(state, plan, decisions, funding = []) {
   const channelUnits = {}
   const todayRows = []
   let cashCosts = 0
+  const purchases = new Map()
   let remaining = (lifestyleActive ? 2000 : 0) + Math.max(0, Math.round((capacity + places[plan.place].capacity) / 15 * (support ? 1 + plan.labor / 100 : 1)))
   const combinations = plan.items.flatMap(item => plan.channels.map(channel => ({ item, channel })))
   const offset = (state.day - 1) % combinations.length
@@ -168,7 +198,7 @@ export function advance(state, plan, decisions, funding = []) {
     if (!remaining) continue
     const saleOnly = !plan.tiers.includes('regular')
     const saleShare = saleOnly ? 100 : plan.tiers.includes('sale') ? item.share : 0
-    const salePrice = Math.max(1, item.price - portion(item.price, item.discount))
+    const salePrice = salePriceFor(item)
     const currentPrice = item.price * (1 - saleShare / 100) + salePrice * saleShare / 100
     const growth = isLifestyleProduct(plan.industry, item.id)
       ? Math.min(1300, Math.max(0, (state.month - 2) * 93)) * event.demand * channels[channel][1]
@@ -187,8 +217,9 @@ export function advance(state, plan, decisions, funding = []) {
     const regular = (units - sales) * item.price
     const sale = sales * salePrice
     const revenue = regular + sale
-    let cost = portion(item.price * units, item.cost)
+    let cost = unitCost(plan.industry, item) * units
     let cashCost = cost
+    let purchased = plan.industry === 'retail' ? units : 0
     if (isLifestyle) {
       let unfilled = units
       while (unfilled && inventory.length) {
@@ -198,13 +229,18 @@ export function advance(state, plan, decisions, funding = []) {
         unfilled -= drawn
         if (!lot.units) inventory.shift()
       }
-      cashCost = unfilled * lifestyle.purchase
-      cost = (units - unfilled) * lifestyle.production + cashCost
+      purchased = unfilled
+      cost = (units - unfilled) * lifestyle.production
+      cashCost = 0
+    } else if (purchased) {
+      cost = 0
+      cashCost = 0
     }
+    if (purchased) purchases.set(item.id, (purchases.get(item.id) || 0) + purchased)
     for (const [tier, unitPrice, count] of [['regular', item.price, units - sales], ['sale', salePrice, sales]]) {
       if (!count) continue
       const product = products[plan.industry][item.id][0]
-      const discount = tier === 'sale' ? item.discount : 0
+      const discount = tier === 'sale' ? Math.round((1 - unitPrice / item.price) * 10000) / 100 : 0
       const key = [product, channel, tier, unitPrice, discount].join('|')
       const row = { product, channel, tier, price: unitPrice, discount, units: count }
       todayRows.push(row)
@@ -229,6 +265,17 @@ export function advance(state, plan, decisions, funding = []) {
     today.sale += sale
     remaining -= units
   }
+  const todayPurchases = []
+  for (const [id, count] of purchases) {
+    const item = plan.items.find(entry => entry.id === id)
+    const quote = purchaseQuote(unitCost(plan.industry, item), count)
+    const row = { ...quote, product: products[plan.industry][id][0], day: state.day }
+    todayPurchases.push(row)
+    purchaseRows.push(row)
+    totals.cost += quote.amount
+    cashCosts += quote.amount
+    expenses += quote.amount
+  }
   const revenue = today.regular + today.sale
   const labor = support ? portion(revenue, plan.labor) : 0
   const marketing = promotion ? portion(revenue, plan.marketing) : 0
@@ -248,8 +295,8 @@ export function advance(state, plan, decisions, funding = []) {
   }
 
   debt = pay(debt + cashCosts)
-  const next = { ...state, industry: plan.industry, place: plan.place, lease, deposit, cash, debt, due, receivables, loans, totals, inventory, monthlyTeam, salesRows, day: state.day + 1,
-    today: { ...today, rows: todayRows, expense: expenses, accrued, cashChange: cash - openingCash } }
+  const next = { ...state, industry: plan.industry, place: plan.place, lease, deposit, cash, debt, due, receivables, loans, totals, inventory, monthlyTeam, salesRows, purchaseRows, day: state.day + 1,
+    today: { ...today, rows: todayRows, purchases: todayPurchases, expense: expenses, accrued, cashChange: cash - openingCash } }
   if (state.day !== 30) return next
   totals.rent = lease
   totals.salary = (monthlyTeam.online + monthlyTeam.offline) * staffing.salary
@@ -265,7 +312,7 @@ export function advance(state, plan, decisions, funding = []) {
     totals.principal += principal
     loan.balance -= principal
   }
-  const preTax = totals.regular + totals.sale - totals.cost - totals.fees - totals.rent - totals.labor - totals.marketing - totals.interest - totals.logistics
+  const preTax = earnings(totals).beforeTax
   const annualIncome = (state.annualIncome || 0) + preTax
   const yearEnd = state.month % 12 === 0
   totals.tax = yearEnd ? portion(Math.max(annualIncome, 0), plan.tax) : 0
@@ -274,6 +321,6 @@ export function advance(state, plan, decisions, funding = []) {
   const loanBalance = loans.reduce((sum, loan) => sum + loan.balance, 0)
   const equity = state.equity + profit
   return { ...next, month: state.month + 1, day: 1, cash, debt, due: due + receivables, receivables: 0, equity,
-    loans: loans.filter(loan => loan.balance), totals: zero(), monthlyTeam: {}, salesRows: {}, annualIncome: yearEnd ? 0 : annualIncome,
-    last: { ...totals, yearEnd, annualIncome, inventoryValue: inventory.reduce((sum, lot) => sum + lot.units * lot.cost, 0), salesRows: Object.values(salesRows), month: state.month, profit, cash, deposit, receivables: due + receivables, debt, loanBalance, equity, openingEquity: state.equity } }
+    loans: loans.filter(loan => loan.balance), totals: zero(), monthlyTeam: {}, salesRows: {}, purchaseRows: [], annualIncome: yearEnd ? 0 : annualIncome,
+    last: { ...totals, yearEnd, annualIncome, inventoryValue: inventory.reduce((sum, lot) => sum + lot.units * lot.cost, 0), salesRows: Object.values(salesRows), purchases: purchaseRows, month: state.month, profit, cash, deposit, receivables: due + receivables, debt, loanBalance, equity, openingEquity: state.equity } }
 }

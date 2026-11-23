@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { create, advance, eventFor, migrate } from './daily.mjs'
+import { create, advance, eventFor, migrate, purchaseQuote, earnings } from './daily.mjs'
 import { start } from './engine.mjs'
 
 const plan = { industry: 'retail', place: 'shared', channels: ['online', 'b2b'], tiers: ['regular', 'sale'],
@@ -72,4 +72,29 @@ test('채널별 직원 기준과 월별 비용, 연간 소득세를 정산한다
   assert.equal(closed.annualIncome, 0)
   assert.equal(closed.last.cash + closed.last.receivables + closed.last.deposit + closed.last.inventoryValue, closed.last.equity + closed.last.debt + closed.last.loanBalance)
   assert.equal(advance({ ...staffed, month: 11 }, team, []).last.tax, 0)
+})
+
+test('할인 수량 경계에서 순매입액을 계산한다', () => {
+  for (const [quantity, discount, amount] of [[99, 0, 1188000], [100, 3, 1164000], [500, 5, 5700000], [1000, 10, 10800000]]) {
+    assert.deepEqual(purchaseQuote(12000, quantity), { price: 12000, quantity, discount, amount })
+  }
+})
+
+test('입력한 판매가와 매입가가 매출·원가·이익으로 이어진다', () => {
+  const item = { ...plan.items[0], price: 19000, salePrice: 17500, unitCost: 12000 }
+  const settings = { ...plan, channels: ['offline', 'online'], items: [item], place: 'home' }
+  const state = { ...create('테스트', 'retail'), month: 5, day: 30 }
+  const next = advance(state, settings, ['promotion'])
+  const r = next.last
+  assert.ok(r.salesRows.some(row => row.price === 17500 && row.units > 0))
+  assert.ok(r.salesRows.some(row => row.price === 19000 && row.units > 0))
+  assert.equal(r.regular + r.sale, r.salesRows.reduce((sum, row) => sum + row.units * row.price, 0))
+  assert.equal(r.purchases[0].discount, 5)
+  assert.equal(r.cost, r.purchases[0].amount)
+  const result = earnings(r)
+  assert.equal(result.gross, result.revenue - r.cost)
+  assert.equal(result.net, r.profit)
+  const withFinancing = earnings({ ...r, interest: 10000, tax: 20000 })
+  assert.equal(withFinancing.beforeTax, result.operating - 10000)
+  assert.equal(withFinancing.net, result.operating - 30000)
 })
