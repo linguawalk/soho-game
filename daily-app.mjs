@@ -1,11 +1,11 @@
 import { industries, places } from './data.mjs'
-import { products, channels, eventFor, create, migrate, advance, validatePlan } from './daily.mjs'
+import { products, channels, eventFor, create, migrate, advance, validatePlan, lifestyle, isLifestyleProduct } from './daily.mjs'
 
 const $ = id => document.getElementById(id)
 const key = 'soho-game.save'
-const rates = { labor: '인건비율', marketing: '마케팅비율', handling: '추가 처리비율', rent: '월세 적용률', tax: '세율' }
+const rates = { labor: '임시 작업 지원비율', marketing: '마케팅비율', handling: '추가 처리비율', rent: '월세 적용률', tax: '연간 소득세·법인세율', vat: '부가세율' }
 const lenders = { bank: '은행', government: '정부' }
-const defaults = { labor: 5, marketing: 8, handling: 0, rent: 100, tax: 10 }
+const defaults = { labor: 5, marketing: 8, handling: 0, rent: 100, tax: 10, vat: 10 }
 const won = n => n.toLocaleString('ko-KR') + '원'
 let state
 let plan
@@ -39,7 +39,7 @@ function checks(container) {
 }
 
 function defaultPlan(industry, ids = [0]) {
-  return { ...defaults, industry, place: state.place, channels: ['offline'], tiers: ['regular', 'sale'],
+  return { ...defaults, wholesale: true, logistics: lifestyle.logistics, team: { online: 0, offline: 0 }, industry, place: state.place, channels: ['offline'], tiers: ['regular', 'sale'],
     items: ids.map(id => itemDefaults(industry, id)) }
 }
 
@@ -61,12 +61,14 @@ function renderItems() {
       numberField('cost', costLabel[plan.industry] + ' (%)', item.cost),
       numberField('discount', '세일 할인율 (%)', item.discount, 0, 99.99),
       numberField('share', '세일 판매 비중 (%)', item.share))
+    if (isLifestyleProduct(plan.industry, id)) fields.querySelector('[name=cost]').parentElement.hidden = true
     const priceNote = node('small', '')
     priceNote.className = 'muted price-note'
     card.append(checkbox(id, name, Boolean(selected)), fields, priceNote)
     return card
   }))
   updatePrices()
+  updateSourcing()
 }
 
 function updatePrices() {
@@ -74,9 +76,22 @@ function updatePrices() {
     const price = card.querySelector('[name=price]').valueAsNumber
     const discount = card.querySelector('[name=discount]').valueAsNumber
     card.querySelector('.price-note').textContent = Number.isFinite(price * discount)
-      ? '세일가격 ' + won(price - Math.round(price * discount / 100)) + ' · 원가율 기준은 정상가격'
+      ? '세일가격 ' + won(price - Math.round(price * discount / 100)) + (isLifestyleProduct(plan.industry, Number(card.querySelector('input[type=checkbox]').value)) ? '' : ' · 원가율 기준은 정상가격')
       : ''
   }
+}
+
+function updateSourcing() {
+  const checkbox = $('products').querySelector('input[type=checkbox][value="0"]')
+  const enabled = $('active-industry').value === 'retail' && checkbox?.checked
+  $('sourcing').hidden = !enabled
+  $('production').disabled = !enabled
+  $('logistics').disabled = !enabled
+  const quantity = $('production').valueAsNumber
+  const logistics = $('logistics').valueAsNumber
+  $('production-preview').textContent = quantity > 0 && Number.isFinite(logistics)
+    ? '예상 선결제 ' + won(quantity * lifestyle.production + logistics) + ' (제작비와 물류비)'
+    : '직접 제작을 하지 않는 날에는 0개를 유지하세요.'
 }
 
 function readPlan() {
@@ -87,17 +102,24 @@ function readPlan() {
       for (const name of ['price', 'cost', 'discount', 'share']) item[name] = card.querySelector('[name=' + name + ']').valueAsNumber
       return item
     }),
+    wholesale: $('wholesale').checked, logistics: $('logistics').valueAsNumber,
+    production: $('production').disabled ? 0 : $('production').valueAsNumber,
+    team: Object.fromEntries(['online', 'offline'].map(id => [id, $('team').querySelector('[name=' + id + ']').valueAsNumber])),
     ...Object.fromEntries(Object.keys(rates).map(id => [id, $('rates').querySelector('[name=' + id + ']').valueAsNumber])),
   }
 }
 
 function renderPlan() {
   $('active-industry').value = plan.industry
+  $('wholesale').checked = plan.wholesale !== false
+  $('production').value = plan.production || 0
+  $('logistics').value = plan.logistics ?? lifestyle.logistics
+  $('team').replaceChildren(...['online', 'offline'].map(id => numberField(id, channels[id][0] + ' 직원 수', plan.team?.[id] || 0, 0, 20, 1)))
   $('place').value = plan.place
   $('place').disabled = state.day !== 1
   $('channels').replaceChildren(...Object.entries(channels).map(([id, [name]]) => checkbox(id, name, plan.channels.includes(id))))
   for (const input of $('tiers').querySelectorAll('input')) input.checked = plan.tiers.includes(input.value)
-  $('rates').replaceChildren(...Object.entries(rates).map(([id, label]) => numberField(id, label + ' (%)', plan[id])))
+  $('rates').replaceChildren(...Object.entries(rates).map(([id, label]) => numberField(id, label + ' (%)', plan[id] ?? defaults[id])))
   $('rates').querySelector('[name=rent]').disabled = state.day !== 1 || (state.month !== 1 && state.place === plan.place)
   $('funding').replaceChildren(...Object.entries(lenders).map(([id, label]) => {
     const field = numberField(id, label + ' 신청액 (원)', 0, 0, 5000000, 1)
@@ -117,6 +139,23 @@ function list(rows) {
   return dl
 }
 
+function addSales(parent, rows) {
+  if (!rows?.length) return
+  const table = node('table', '')
+  const head = node('tr', '')
+  for (const name of ['품목 · 채널', '가격', '수량']) head.append(node('th', name))
+  const thead = node('thead', '')
+  thead.append(head)
+  const body = node('tbody', '')
+  for (const row of rows) {
+    const tr = node('tr', '')
+    tr.append(node('td', row.product + ' · ' + channels[row.channel][0]), node('td', (row.tier === 'sale' ? row.discount + '% 세일 ' : '정상가 ') + won(row.price)), node('td', row.units + '개'))
+    body.append(tr)
+  }
+  table.append(thead, body)
+  parent.append(table)
+}
+
 function report() {
   const r = state.last
   $('report-title').textContent = r ? r.month + '개월 차 실적' : '월말 실적'
@@ -125,12 +164,13 @@ function report() {
     $('report').append(node('p', '30일 차를 마감하면 첫 월간 실적이 표시됩니다.'))
     return
   }
-  $('report').append(list([['매출', won(r.regular + r.sale)], ['당월 손익', won(r.profit)], ['월말 현금', won(r.cash)]]))
+  $('report').append(list([['매출', won(r.regular + r.sale)], ['정상가 판매', (r.regularUnits ?? 0) + '개'], ['세일 판매', (r.saleUnits ?? 0) + '개'], ['당월 손익', won(r.profit)], ['월말 현금', won(r.cash)]]))
+  addSales($('report'), r.salesRows)
   const lines = rows => rows.map(([name, value]) => [name, won(value)])
   const sheets = [
-    ['손익계산서', [['정상가 매출', r.regular], ['세일가 매출', r.sale], ['사입·제작·서비스 원가', r.cost], ['인건비', r.labor], ['마케팅', r.marketing], ['채널·처리 비용', r.fees], ['임대료', r.rent], ['이자', r.interest], ['세금', r.tax], ['당월 손익', r.profit]]],
-    ['현금흐름표', [['월초 현금', r.cash - r.receipts - r.borrowed + r.out], ['영업 수입', r.receipts - r.depositIn], ['영업 지출', r.out - r.depositOut - r.principal], ['보증금 지급', r.depositOut], ['보증금 회수', r.depositIn], ['대출 입금', r.borrowed], ['원금 지급', r.principal], ['월말 현금', r.cash]]],
-    ['대차대조표', [['현금', r.cash], ['미수금', r.receivables], ['보증금', r.deposit], ['총자산', r.cash + r.receivables + r.deposit], ['미지급 비용', r.debt], ['대출 잔액', r.loanBalance], ['자본', r.equity], ['부채 및 자본 합계', r.debt + r.loanBalance + r.equity]]],
+    ['손익계산서', [['정상가 매출', r.regular], ['세일가 매출', r.sale], ['사입·제작·서비스 원가', r.cost], ['인건비 합계', r.labor], ['고정 직원 급여', r.salary || 0], ['제작 물류비', r.logistics || 0], ['마케팅', r.marketing], ['채널·처리 비용', r.fees], ['임대료', r.rent], ['이자', r.interest], ['연간 소득세·법인세', r.tax], ['당월 손익', r.profit]]],
+    ['현금흐름표', [['월초 현금', r.cash - r.receipts - r.borrowed + r.out], ['영업 수입', r.receipts - r.depositIn], ['영업 지출', r.out - r.depositOut - r.principal], ['제작 원가 선결제', r.productionPaid || 0], ['월간 부가세 산정액', r.vat || 0], ['보증금 지급', r.depositOut], ['보증금 회수', r.depositIn], ['대출 입금', r.borrowed], ['원금 지급', r.principal], ['월말 현금', r.cash]]],
+    ['대차대조표', [['현금', r.cash], ['미수금', r.receivables], ['보증금', r.deposit], ['제작 재고', r.inventoryValue || 0], ['총자산', r.cash + r.receivables + r.deposit + (r.inventoryValue || 0)], ['미지급 비용', r.debt], ['대출 잔액', r.loanBalance], ['자본', r.equity], ['부채 및 자본 합계', r.debt + r.loanBalance + r.equity]]],
     ['자본변동표', [['월초 자본', r.openingEquity], ['당월 손익', r.profit], ['월말 자본', r.equity]]],
   ]
   for (const [title, rows] of sheets) {
@@ -144,7 +184,7 @@ function render() {
   $('intro').hidden = true
   $('game').hidden = false
   $('business').textContent = state.name + ' · ' + industries[state.industry].name
-  const metrics = [['운영일', state.month + '개월 차 ' + state.day + '일'], ['가용 현금', won(state.cash)], ['미수금', won(state.due + state.receivables)], ['미지급 비용', won(state.debt)]]
+  const metrics = [['운영일', state.month + '개월 차 ' + state.day + '일'], ['가용 현금', won(state.cash)], ['미수금', won(state.due + state.receivables)], ['미지급 비용', won(state.debt)], ['생활소품 제작 재고', (state.inventory || []).reduce((sum, lot) => sum + lot.units, 0) + '개']]
   $('metrics').replaceChildren(...metrics.map(([label, value]) => {
     const card = node('div', '')
     card.className = 'metric'
@@ -156,6 +196,7 @@ function render() {
   $('story').textContent = current.story
   $('advance').textContent = state.day === 30 ? '30일 차 마감 및 월간 정산' : '오늘 마감'
   $('today').replaceChildren(state.today ? list([['판매·처리 건수', state.today.units], ['정상가 매출', won(state.today.regular)], ['세일가 매출', won(state.today.sale)], ['영업 비용', won(state.today.expense)], ['새 미수금', won(state.today.accrued)], ['현금 변동', won(state.today.cashChange)]]) : node('p', '오늘을 마감하면 실적이 반영됩니다.'))
+  addSales($('today'), state.today?.rows)
   renderPlan()
   for (const input of $('responses').querySelectorAll('input')) input.checked = false
   report()
@@ -181,7 +222,7 @@ function restore(saved) {
   if (!Number.isInteger(next.month) || next.month < 1 || !Number.isInteger(next.day) || next.day < 1 || next.day > 30 || !Array.isArray(next.loans) || !next.totals) throw Error('저장한 날짜 또는 거래 내역을 읽을 수 없습니다.')
   if (saved.plan) validatePlan(saved.plan)
   state = next
-  plan = saved.plan || defaultPlan(state.industry)
+  plan = { ...defaultPlan(state.industry), ...saved.plan }
   if (prior.version === 1 && prior.channel === 'platform') plan.channels = ['online']
   render()
   const responses = Array.isArray(saved.responses) ? saved.responses : []
@@ -223,6 +264,7 @@ $('plan').addEventListener('input', event => {
   }
   const draft = readPlan()
   updatePrices()
+  updateSourcing()
   try { validatePlan(draft); plan = draft; save() } catch { $('status').textContent = '유효한 선택이 입력되면 자동 저장됩니다.' }
 })
 $('responses').addEventListener('change', save)
@@ -235,7 +277,7 @@ $('plan').addEventListener('submit', event => {
       return !input.disabled && input.valueAsNumber ? [{ source, amount: input.valueAsNumber }] : []
     })
     state = advance(state, updated, checks($('responses')), funding)
-    plan = updated
+    plan = { ...updated, production: 0 }
     render()
     save()
     $('error').textContent = ''

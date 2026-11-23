@@ -39,3 +39,37 @@ test('복수 선택에서 비율을 검증하고 기존 저장을 변환한다',
   assert.throws(() => advance(state, { ...plan, marketing: 101 }, []), /비용 비율/)
   assert.throws(() => advance(state, { ...plan, channels: [] }, []), /하나 이상/)
 })
+
+test('생활소품의 사입·최소 제작·물류·재고와 가격별 수량을 계산한다', () => {
+  const state = create('생활소품점', 'retail', 9000000)
+  const basic = { ...plan, place: 'home', items: [plan.items[0]], channels: ['offline'] }
+  const wholesale = advance(state, basic, [])
+  assert.equal(wholesale.totals.cost, wholesale.today.units * 12000)
+  assert.throws(() => advance(state, { ...basic, production: 999 }, []), /1,000/)
+  const made = advance(state, { ...basic, production: 1000, logistics: 320000, wholesale: false }, [])
+  assert.equal(made.totals.productionPaid, 7000000)
+  assert.equal(made.totals.logistics, 320000)
+  assert.equal(made.totals.cost, made.today.units * 7000)
+  assert.equal(made.inventory[0].units, 1000 - made.today.units)
+  assert.deepEqual(made.today.rows.map(row => row.price), [19000, 18240])
+  assert.equal(made.today.rows.reduce((sum, row) => sum + row.units, 0), made.today.units)
+})
+
+test('채널별 직원 기준과 월별 비용, 연간 소득세를 정산한다', () => {
+  const state = { ...create('생활소품점', 'retail', 50000000), month: 12, day: 29, annualIncome: 1000000 }
+  const basic = { ...plan, place: 'home', items: [plan.items[0]], channels: ['online', 'offline'], vat: 10 }
+  const alone = advance(state, basic, ['promotion'])
+  const byChannel = channel => alone.today.rows.filter(row => row.channel === channel).reduce((sum, row) => sum + row.units, 0)
+  assert.equal(byChannel('online'), 499)
+  assert.equal(byChannel('offline'), 199)
+  const team = { ...basic, team: { online: 1, offline: 1 } }
+  const staffed = advance(state, team, ['promotion'])
+  assert.ok(staffed.today.units > alone.today.units)
+  assert.equal(staffed.totals.salary, 0)
+  const closed = advance(staffed, team, ['promotion'])
+  assert.equal(closed.last.salary, 5000000)
+  assert.ok(closed.last.vat > 0 && closed.last.tax > 0 && closed.last.marketing > 0)
+  assert.equal(closed.annualIncome, 0)
+  assert.equal(closed.last.cash + closed.last.receivables + closed.last.deposit + closed.last.inventoryValue, closed.last.equity + closed.last.debt + closed.last.loanBalance)
+  assert.equal(advance({ ...staffed, month: 11 }, team, []).last.tax, 0)
+})

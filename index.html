@@ -33,8 +33,16 @@
 <fieldset><legend>판매 가격 유형</legend><div id="tiers" class="checks">
 <label><input type="checkbox" value="regular"> 정상가격</label><label><input type="checkbox" value="sale"> 세일가격</label></div></fieldset>
 <fieldset><legend>품목과 가격</legend><div id="products"></div></fieldset>
-<fieldset><legend>비용 비율</legend><div id="rates" class="fields"></div>
-<p class="muted">인건비·마케팅·추가 처리비는 매출 기준, 월세는 사업장 기준액 대비 비율, 세금은 양수인 월간 세전이익 기준입니다. 기존 약정과 채널 수수료는 자동 적용됩니다.</p></fieldset>
+<fieldset id="sourcing" hidden><legend>생활소품 조달</legend>
+<p>사입 단가 12,000원 · 직접 제작 단가 7,000원 · 최소 제작수량 1,000개</p>
+<label><input type="checkbox" id="wholesale"> 제작 재고가 부족하면 사입</label>
+<div class="fields"><label>오늘 직접 제작 수량<input id="production" type="number" min="0" max="100000" step="1" value="0"></label>
+<label>제작 물류비 (회당 원)<input id="logistics" type="number" min="0" step="1" value="300000"></label></div>
+<p id="production-preview" class="muted"></p></fieldset>
+<fieldset><legend>채널별 고정 인력</legend><div id="team" class="fields"></div>
+<p class="muted">일 판매 500개 이상(온라인), 200개 이상(오프라인)부터 채널별 직원을 배치해야 합니다. 이번 달 최대 배치 인원 기준으로 1인당 월 250만 원을 정산합니다.</p></fieldset>
+<fieldset><legend>비용·세금 비율</legend><div id="rates" class="fields"></div>
+<p class="muted">작업 지원·마케팅·추가 처리비는 매출 기준, 월세는 사업장 기준액 대비 비율입니다. 표시 가격은 부가세 별도입니다. 게임 내 부가세는 월말에, 소득세·법인세는 12개월마다 연간 이익을 기준으로 계산합니다.</p></fieldset>
 <details><summary>대출 신청</summary><div id="funding" class="fields"></div><p class="muted">다음 달부터 월말 상환. 은행 6개월·월 1%, 정부 12개월·월 0.45%의 게임용 조건입니다.</p></details>
 <button id="advance">오늘 마감</button>
 </form></div>

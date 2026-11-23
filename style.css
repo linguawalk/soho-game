@@ -41,3 +41,6 @@ legend { font-weight: 700; }
 aside h2:not(:first-child) { margin-top: 24px; }
 details { margin: 8px 0 16px; }
 summary { cursor: pointer; font-weight: 650; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
+th, td { text-align: left; padding: 5px; border-bottom: 1px solid #edf0eb; }
+#wholesale { display: inline; width: auto; margin: 0; }
